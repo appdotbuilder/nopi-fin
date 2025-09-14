@@ -1,15 +1,33 @@
+import { db } from '../db';
+import { notesTable, usersTable } from '../db/schema';
 import { type CreateNoteInput, type Note } from '../schema';
+import { eq } from 'drizzle-orm';
 
-export async function createNote(input: CreateNoteInput): Promise<Note> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is creating a new financial note and persisting it in the database.
-    // Should validate that the user exists and has permission to create notes.
-    return Promise.resolve({
-        id: 0, // Placeholder ID
+export const createNote = async (input: CreateNoteInput): Promise<Note> => {
+  try {
+    // Validate that the user exists first
+    const existingUser = await db.select()
+      .from(usersTable)
+      .where(eq(usersTable.id, input.user_id))
+      .execute();
+
+    if (existingUser.length === 0) {
+      throw new Error(`User with id ${input.user_id} not found`);
+    }
+
+    // Insert note record
+    const result = await db.insert(notesTable)
+      .values({
         user_id: input.user_id,
         title: input.title,
-        content: input.content,
-        created_at: new Date(),
-        updated_at: new Date()
-    } as Note);
-}
+        content: input.content
+      })
+      .returning()
+      .execute();
+
+    return result[0];
+  } catch (error) {
+    console.error('Note creation failed:', error);
+    throw error;
+  }
+};

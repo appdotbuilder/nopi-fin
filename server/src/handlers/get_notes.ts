@@ -1,9 +1,25 @@
+import { db } from '../db';
+import { notesTable } from '../db/schema';
 import { type GetUserNotesInput, type Note } from '../schema';
+import { eq, desc } from 'drizzle-orm';
 
 export async function getUserNotes(input: GetUserNotesInput): Promise<Note[]> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is fetching all notes for a specific user.
-    // Should support pagination with limit and offset.
-    // Should validate that the requesting user has permission to view these notes.
-    return Promise.resolve([]);
+  try {
+    // Build query with all parameters applied at once to avoid TypeScript issues
+    const limit = input.limit || 1000; // Default high limit if not specified
+    const offset = input.offset || 0; // Default to 0 if not specified
+
+    const results = await db.select()
+      .from(notesTable)
+      .where(eq(notesTable.user_id, input.user_id))
+      .orderBy(desc(notesTable.created_at))
+      .limit(limit)
+      .offset(offset)
+      .execute();
+
+    return results;
+  } catch (error) {
+    console.error('Failed to get user notes:', error);
+    throw error;
+  }
 }

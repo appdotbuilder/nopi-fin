@@ -1,8 +1,18 @@
+import { db } from '../db';
+import { usersTable } from '../db/schema';
 import { type User } from '../schema';
+import { eq } from 'drizzle-orm';
 
 export async function getUser(userId: string): Promise<User | null> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is fetching a user by their Firebase UID from the database.
-    // Returns null if user is not found.
-    return Promise.resolve(null);
+  try {
+    const result = await db.select()
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .execute();
+
+    return result.length > 0 ? result[0] : null;
+  } catch (error) {
+    console.error('Failed to fetch user:', error);
+    throw error;
+  }
 }

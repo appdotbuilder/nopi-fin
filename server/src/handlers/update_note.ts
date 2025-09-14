@@ -1,16 +1,43 @@
+import { db } from '../db';
+import { notesTable } from '../db/schema';
 import { type UpdateNoteInput, type Note } from '../schema';
+import { eq } from 'drizzle-orm';
 
-export async function updateNote(input: UpdateNoteInput): Promise<Note> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is updating an existing note in the database.
-    // Should validate that the note exists and the user has permission to update it.
-    // Should update the updated_at timestamp.
-    return Promise.resolve({
-        id: input.id,
-        user_id: 'placeholder_user_id',
-        title: input.title || 'Placeholder Title',
-        content: input.content || 'Placeholder Content',
-        created_at: new Date(),
-        updated_at: new Date()
-    } as Note);
-}
+export const updateNote = async (input: UpdateNoteInput): Promise<Note> => {
+  try {
+    // First verify the note exists
+    const existingNote = await db.select()
+      .from(notesTable)
+      .where(eq(notesTable.id, input.id))
+      .execute();
+
+    if (existingNote.length === 0) {
+      throw new Error(`Note with id ${input.id} not found`);
+    }
+
+    // Build update object with only provided fields
+    const updateData: Partial<typeof notesTable.$inferInsert> = {
+      updated_at: new Date()
+    };
+
+    if (input.title !== undefined) {
+      updateData.title = input.title;
+    }
+
+    if (input.content !== undefined) {
+      updateData.content = input.content;
+    }
+
+    // Update the note
+    const result = await db.update(notesTable)
+      .set(updateData)
+      .where(eq(notesTable.id, input.id))
+      .returning()
+      .execute();
+
+    return result[0];
+  } catch (error) {
+    console.error('Note update failed:', error);
+    throw error;
+  }
+};
